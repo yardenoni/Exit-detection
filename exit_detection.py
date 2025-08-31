@@ -130,8 +130,6 @@ class ExitDetector3D:
         Verifies if candidate 3D points in a YOLO box correspond to a real exit.
         Returns (confidence boost, reason string)
         """
-        if len(in_box) < 10:
-            return (0.0, "too few points")  # Not enough 3D points
 
         pts = np.array(in_box)  # Nx3
         depths = pts[:,2]       # Z-coordinates in camera frame
@@ -145,10 +143,6 @@ class ExitDetector3D:
         dominant = eigvecs[:, np.argmax(eigvals)]
         elongated = abs(dominant[2]) > 0.7   # Axis mostly along Z → corridor/door
 
-        # --- Depth variance check ---
-        depth_var = np.var(depths)
-        depth_ok = depth_var > 1.0           # Reject flat surfaces (windows/walls)
-
         # --- Floor proximity check ---
         # Project points back to 2D to check bottom pixel
         uv = [self.project_points(np.array([p]))[0] for p in pts if len(self.project_points(np.array([p]))) > 0]
@@ -159,7 +153,7 @@ class ExitDetector3D:
             near_floor = (v > 0.8 * h)  # Close to floor
 
         # --- Decision ---
-        if free_space and elongated and depth_ok and near_floor:
+        if free_space and elongated and near_floor:
             return (0.4, "geometry+PCA")   # Give confidence boost
         else:
             return (0.0, "failed checks")
